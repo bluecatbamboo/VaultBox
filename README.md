@@ -351,7 +351,9 @@ You should see the test emails appear in the VaultBox web UI or via the API if e
 
 ## Future Development & Roadmap
 
+- port 25 STARTTLS support for recieving real email
 - Refine and optimize the existing codebase
+- Security upgrade - spam prevention, rate-limit, whitelisting etc
 - Improve and modernize the web UI
 - Explore or plan a migration to Go for enhanced performance and scalability
 
