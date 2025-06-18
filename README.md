@@ -1,6 +1,6 @@
 # VaultBox
 
-A secure, fast mailbox server designed for safely testing and viewing emails in development and CI environments. VaultBox helps developers capture, inspect, and manage test emails without risking real inboxes or exposing sensitive data.
+A secure, fast mailbox server designed for safely testing (recieving) and viewing emails in development and CI environments. VaultBox helps developers capture, inspect, and manage test emails without risking real inboxes or exposing sensitive data.
 
 ## Contents
 
@@ -20,6 +20,9 @@ A secure, fast mailbox server designed for safely testing and viewing emails in 
   - [Environment Variable Configuration](#environment-variable-configuration)
   - [User Model and SSE Subscription](#user-model-and-sse-subscription)
   - [Endpoints \& Access URLs](#endpoints--access-urls)
+  - [Email Testing](#email-testing)
+    - [Sending a Test Email](#sending-a-test-email)
+    - [Sending an HTML-Only Test Email](#sending-an-html-only-test-email)
   - [Future Development \& Roadmap](#future-development--roadmap)
   - [License](#license)
   - [Team](#team)
@@ -216,6 +219,135 @@ Once VaultBox is running, you can access the following endpoints:
     - `/api/sse/{email}` — Subscribe to real-time updates for a specific email address
 
 Adjust the host/port as needed if you change the configuration.
+
+
+## Email Testing
+
+You can easily test VaultBox by sending emails to its SMTP server. Sample scripts are provided in the `testing/` folder to help you verify that the service is working correctly.
+
+### Sending a Test Email
+
+Run the following script to send a test email to VaultBox (make sure the VaultBox server is running):
+
+```bash
+python3 testing/send_test_email.py
+```
+
+This script will send a test email to `test@example.com` via the local SMTP server on port 587. You can customize the recipient, sender, and subject by editing the script or calling its function directly.
+
+<details>
+<summary><strong>Example Python Code: Send Plain Text Email</strong></summary>
+
+```python
+import smtplib
+import ssl
+from datetime import datetime
+from email.message import EmailMessage
+
+def send_test_email(subject=None, to_addr=None, from_addr=None):
+    subject = subject or f"Test Email - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    to_addr = to_addr or "test@example.com"
+    from_addr = from_addr or "sender@example.com"
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_addr
+    msg.set_content(f"""
+    This is a test email sent via SMTP with STARTTLS.
+    
+    Timestamp: {datetime.now().isoformat()}
+    From: {from_addr}
+    To: {to_addr}
+    
+    If you receive this email, the SMTP server is working correctly.
+    """)
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    try:
+        with smtplib.SMTP("localhost", 587) as server:
+            server.starttls(context=context)
+            server.send_message(msg)
+        print(f"Test email sent successfully to {to_addr}")
+        return True
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        return False
+
+if __name__ == "__main__":
+    send_test_email()
+```
+
+</details>
+
+### Sending an HTML-Only Test Email
+
+To test sending an email with only HTML content, run:
+
+```bash
+python3 testing/test_send_html_only_email.py
+```
+
+This script will send an HTML-only email to a randomized test address. You can review the code or modify it as needed.
+
+<details>
+<summary><strong>Example Python Code: Send HTML-Only Email</strong></summary>
+
+```python
+import smtplib
+import ssl
+from datetime import datetime
+from email.message import EmailMessage
+import random
+import string
+
+def random_string(length=8):
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
+def send_html_only_email():
+    now = datetime.now()
+    rand_id = random_string(12)
+    subject = f"HTML Only Test - {now.strftime('%Y-%m-%d %H:%M:%S')} - {rand_id}"
+    to_addr = f"test+{random_string(5)}@example.com"
+    from_addr = f"sender+{random_string(5)}@example.com"
+    html_body = f"""
+      <div style='font-family: Arial, sans-serif;'>
+        <h2 style='color:#dc3545;'>HTML Only Email</h2>
+        <p>This is a <b>test email</b> with <span style='color:#28a745;'>only HTML</span> content.</p>
+        <ul>
+          <li><b>Timestamp:</b> {now.isoformat()}</li>
+          <li><b>Random ID:</b> {rand_id}</li>
+          <li><b>From:</b> {from_addr}</li>
+          <li><b>To:</b> {to_addr}</li>
+        </ul>
+        <p style='color:#888;'>If you receive this email, the SMTP server is working correctly.</p>
+      </div>
+    """
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_addr
+    msg.add_alternative(html_body, subtype="html")
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    try:
+        with smtplib.SMTP("localhost", 587) as server:
+            server.starttls(context=context)
+            server.send_message(msg)
+        print(f"HTML only test email sent successfully to {to_addr}")
+        return True
+    except Exception as e:
+        print(f"Failed to send HTML only email: {e}")
+        return False
+
+if __name__ == "__main__":
+    send_html_only_email()
+```
+
+</details>
+
+You should see the test emails appear in the VaultBox web UI or via the API if everything is configured correctly.
 
 ## Future Development & Roadmap
 
