@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VaultBox</title>
+    <link rel="stylesheet" href="/static/css/email-detail.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VaultBox</h1>
+            <div class="user-info">
+                <span>Welcome, {{ username }}</span>
+                <button class="btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="email-controls">
+            <div>
+                <button class="btn" onclick="goBack()">← Back to Mailbox</button>
+            </div>
+            <div>
+                <button class="btn" onclick="markAsRead()" id="readBtn">Mark as Read</button>
+                <button class="btn btn-danger" onclick="deleteEmail()">Delete</button>
+            </div>
+        </div>
+
+        <div id="emailContent">
+            <div class="loading">Loading email...</div>
+        </div>
+    </div>
+
+    <script src="/static/js/email-detail.js"></script>
+</body>
+</html>

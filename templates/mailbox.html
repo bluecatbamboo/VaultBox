@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VaultBox</title>
+    <link rel="stylesheet" href="/static/css/mailbox.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VaultBox</h1>
+            <div class="user-info">
+                <span>Welcome, {{ username }}</span>
+                <button class="btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="email-controls">
+            <div class="search-container" style="position: relative; display: flex; align-items: center; gap: 0.5rem;">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search emails..." onkeyup="handleSearch(event)" aria-label="Search emails">
+                <span class="search-tooltip" tabindex="0" style="cursor: pointer; font-size: 1.2em; color: #007bff; border-radius: 50%; width: 1.5em; height: 1.5em; display: flex; align-items: center; justify-content: center; background: #e9f3ff; border: 1px solid #b6d4fe;" onmouseenter="showTooltip(event)" onmouseleave="hideTooltip(event)" onfocus="showTooltip(event)" onblur="hideTooltip(event)">&#9432;</span>
+                <div id="searchTooltipPopup" style="display:none; position: absolute; top: 2.5em; left: 0; z-index: 50; background: #fff; color: #222; border: 1px solid #b6d4fe; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1em; min-width: 260px; font-size: 0.98em;">
+                  <b>Smart &amp; Advanced Search Supported!</b><br>
+                  <div style="margin-top: 0.5em;">
+                    <span>• <b>Simple search:</b> Just type any keyword (e.g. <code>project</code>, <code>alice</code>)</span><br>
+                    <span>• <b>Advanced search:</b> Use <code>field:value</code> pairs, separated by ;.</span><br>
+                    <span style="color:#888;">(e.g. <code>subject:Test</code>;<code>from:alice@example.com</code>;<code>is_read:false</code>;<code>date:2025-06-18</code>)</span><br>
+                    <span>• Combine keywords and fields for powerful queries.</span><br>
+                    <span style="color:#888;">Examples:</span><br>
+                    <code>project update</code><br>
+                    <code>from:bob@example.com subject:Invoice</code><br>
+                    <code>is_read:false date:2025-06-18</code><br>
+                  </div>
+                  <div style="margin-top:0.5em; color:#666; font-size:0.95em;">
+                    Tip: Press <b>Enter</b> to search. You can mix keywords and <code>field:value</code> pairs.
+                  </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions-toolbar" id="actionsToolbar">
+            <div class="selection-controls">
+                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="email-select">
+                <label for="selectAll" class="select-all-label">Select All</label>
+            </div>
+            <div class="action-buttons">
+                <button class="btn" onclick="refreshEmails()">Refresh</button>
+                <button class="btn" onclick="markSelectedAsRead()" id="markReadBtn" disabled>Mark as Read</button>
+                <button class="btn" onclick="markSelectedAsUnread()" id="markUnreadBtn" disabled>Mark as Unread</button>
+                <button class="btn" onclick="deleteSelected()" id="deleteBtn" disabled>Delete</button>
+            </div>
+        </div>
+
+        <div id="emailList">
+            <div class="loading">Loading emails...</div>
+        </div>
+
+        <div id="pagination" class="pagination" style="display: none;"></div>
+    </div>
+
+    <script src="/static/js/mailbox.js"></script>
+    <script>
+    function showTooltip(e) {
+        const tooltip = document.getElementById('searchTooltipPopup');
+        tooltip.style.display = 'block';
+        // Position relative to the icon
+        const iconRect = e.target.getBoundingClientRect();
+        const containerRect = document.body.getBoundingClientRect();
+        // Default left position
+        let left = e.target.offsetLeft;
+        let top = e.target.offsetTop + e.target.offsetHeight + 8;
+        // Temporarily set left to 0 to measure width
+        tooltip.style.left = '0px';
+        tooltip.style.top = '-9999px';
+        const popupWidth = tooltip.offsetWidth;
+        const windowWidth = window.innerWidth;
+        // Calculate absolute left position in viewport
+        let absLeft = iconRect.left;
+        // If popup would overflow right edge, shift it left
+        if (absLeft + popupWidth > windowWidth - 12) {
+            left = left - (absLeft + popupWidth - windowWidth + 12);
+            if (left < 0) left = 0;
+        }
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+    }
+    function hideTooltip(e) {
+        document.getElementById('searchTooltipPopup').style.display = 'none';
+    }
+
+    function handleSearch(event) {
+        if (event.key === 'Enter') {
+            const value = event.target.value.trim();
+            searchQuery = value;
+            currentPage = 1;
+            loadEmails(1);
+        }
+    }
+    </script>
+</body>
+</html>

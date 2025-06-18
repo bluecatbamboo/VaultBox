@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VaultBox Login</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .form-container {
+            background: white;
+            padding: 2.5rem 3rem;
+            width: 100%;
+            max-width: 430px;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+        h2 {
+            text-align: center;
+            color: #343a40;
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #343a40;
+        }
+        .form-control {
+            width: 100%; /* Prevent overflow from border, keep inside container */
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .alert {
+            padding: 0.75rem 1.25rem;
+            margin-top: 1rem;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>VaultBox</h1>
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" id="username" name="username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="totp_code" class="form-label">TOTP Code</label>
+                <input type="text" id="totp_code" name="totp_code" class="form-control" autocomplete="off" required>
+            </div>
+            <button type="submit" class="btn">Login</button>
+        </form>
+        <div id="error-message" class="alert" style="display: none;"></div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const totp_code = document.getElementById('totp_code').value;
+            const errorMessageDiv = document.getElementById('error-message');
+            
+            errorMessageDiv.style.display = 'none';
+
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+            formData.append('totp_code', totp_code);
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // HttpOnly cookie is set automatically by the server
+                    // No need to store tokens in localStorage
+                    window.location.href = '/mailbox';
+                } else {
+                    showError(data.detail || 'Login failed. Please check your credentials and TOTP code.');
+                }
+            } catch (error) {
+                console.error('Login request failed:', error);
+                showError('An error occurred during login. Please try again.');
+            }
+        });
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

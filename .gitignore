@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Keep example environment file
+!.env.example
+
+# Database
+data/emails.db
+data/*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+smtp.log
+webui.log
+worker.log
+
+# Process IDs
+*.pid
+logs/*.pid
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Backup files
+*.backup
+*_old.*
+*_new.*
+
+# SSL certificates and secrets
+secretes/
+!secretes/.gitkeep
+
+# Keep example files but ignore actual certificates
+!secretes/README.md
+
+# Redis dump
+dump.rdb
+
+# Temporary files
+tmp/
+temp/
+
+# Security and sensitive files
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
+config.json
+secrets.json
+
+# Runtime data
+*.tgz
+*.tar.gz

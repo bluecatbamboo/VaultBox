@@ -1,0 +1,39 @@
+# Docker ignore file to reduce build context size
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+# .env - Don't copy .env files into image, use environment variables instead
+.env
+.env.*
+.venv/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.git
+.gitignore
+README.md
+*.md
+.DS_Store
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.idea/
+.vscode/
+*.log
+logs/*.log
+*.pid
+testing/
+.dockerignore
+Dockerfile
+# Exclude SSL certificates - users must provide their own
+secretes/
+*.pem
+*.key
+*.crt
+*.cert
+docker-compose.yml
+data/emails.db

@@ -1,0 +1,25 @@
+# SMTP Email Server Dependencies
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# Core FastAPI and server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# Authentication and security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+pyotp>=2.9.0
+cryptography>=41.0.0
+
+# Database and templates
+pydantic>=2.0.0
+Jinja2>=3.1.0
+
+# SMTP server
+aiosmtpd>=1.4.0
+
+# Optional: Redis for background processing
+redis>=5.0.0
