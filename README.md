@@ -1,190 +1,232 @@
 # VaultBox
 
-A fully-featured SMTP server with web interface for receiving and managing emails. Built with Python, FastAPI, and Redis.
+A secure, fast mailbox server designed for safely testing and viewing emails in development and CI environments. VaultBox helps developers capture, inspect, and manage test emails without risking real inboxes or exposing sensitive data.
 
-## ✨ Features
+## Contents
 
-- 📧 SMTP server with STARTTLS support (port 587)
-- 🌐 Web interface for email management
-- 🔒 JWT authentication with TOTP 2FA
-- 📊 REST API with Swagger documentation
-- 🔄 Real-time email notifications via WebSocket
-- 💾 SQLite database for email storage
-- 🚀 Redis for message queuing
-- 🐳 Docker support with embedded Redis
+- [VaultBox](#vaultbox)
+  - [Contents](#contents)
+  - [Features](#features)
+    - [Security Features](#security-features)
+    - [Usability Features](#usability-features)
+    - [Development \& Deployment Features](#development--deployment-features)
+  - [Machine Support](#machine-support)
+  - [Getting Started](#getting-started)
+    - [1. Clone and Run Locally (macOS recommended)](#1-clone-and-run-locally-macos-recommended)
+    - [2. Pull and Run the Docker Image](#2-pull-and-run-the-docker-image)
+  - [System Design](#system-design)
+    - [1. Mail Arrival and Processing Flow](#1-mail-arrival-and-processing-flow)
+    - [2. Authentication Flow](#2-authentication-flow)
+  - [Environment Variable Configuration](#environment-variable-configuration)
+  - [User Model and SSE Subscription](#user-model-and-sse-subscription)
+  - [Endpoints \& Access URLs](#endpoints--access-urls)
+  - [Future Development \& Roadmap](#future-development--roadmap)
+  - [License](#license)
+  - [Team](#team)
 
-## 🚀 Quick Start
+## Features
 
-### Local Development
+### Security Features
 
-1. **Copy environment configuration:**
-   ```bash
-   cp .env.example .env
-   ```
+- STARTTLS support for secure SMTP connections
+- Encrypted storage of email data (using AES encryption)
+- Tokenized and encrypted email search index for privacy
+- TOTP (Time-based One-Time Password) two-factor authentication for UI login
+- Secure password hashing (bcrypt)
+- JWT-based API authentication
+- Environment-based secret management for sensitive keys
+- No default credentials or certificates in the image (user must provide their own)
 
-2. **Generate SSL certificates:**
-   ```bash
-   openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes \
-     -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
-   ```
+### Usability Features
 
-3. **Convert certificates to base64 and update .env:**
-   ```bash
-   SSL_CERT_BASE64=$(base64 -w0 < cert.pem)
-   SSL_KEY_BASE64=$(base64 -w0 < key.pem)
-   echo "SSL_CERT_BASE64=$SSL_CERT_BASE64" >> .env
-   echo "SSL_KEY_BASE64=$SSL_KEY_BASE64" >> .env
-   ```
+- REST API for searching and retrieving emails (powered by SQLite full-text search)
+- Interactive API documentation with Swagger (can be toggled off)
+- Real-time email updates in the web UI using Server-Sent Events (SSE)
+- Redis-based queuing for efficient email processing and notifications (embedded Redis for local/CI use)
+- Modern web interface for browsing, searching, and viewing emails (can be toggled off)
+- Download email content and attachments directly from the UI
+- Easy setup and deployment with Docker support
+- Kubernetes/cloud-ready deployment (base64 certs, env config)
+- User authentication and access control
 
-4. **Generate secure keys and update .env:**
-   ```bash
-   SECRET_KEY=$(openssl rand -hex 32)
-   EMAIL_ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
-   echo "SECRET_KEY=$SECRET_KEY" >> .env
-   echo "EMAIL_ENCRYPTION_KEY=$EMAIL_ENCRYPTION_KEY" >> .env
-   ```
+### Development & Deployment Features
 
-5. **Start the SMTP server (automatically detects Redis):**
-   ```bash
-   ./run.sh start
-   ```
-   
-   The script will automatically:
-   - ✅ **Use local Redis** if installed (`brew install redis`)
-   - ⚠️  **Use Docker Redis** if Redis not found but Docker available
-   - ❌ **Show installation options** if neither available
+- Docker image with embedded Redis for easy local and CI/CD setup
+- All configuration via environment variables (12-factor style)
+- Base64-encoded SSL certificates for secure cloud/Kubernetes secrets
+- No persistent secrets or credentials in the image
+- Example configs for local, Docker, and Kubernetes deployments
 
-### Redis Options
+## Machine Support
 
-**Option A: Install Redis locally (recommended for development):**
+VaultBox is developed and tested primarily on macOS. While it may work on other operating systems, official support and troubleshooting are focused on macOS environments.
+
+## Getting Started
+
+You can set up VaultBox in two main ways:
+
+### 1. Clone and Run Locally (macOS recommended)
+
 ```bash
-# Install Redis
-brew install redis
-
-# Start server (Redis will be auto-detected)
-./run.sh start
+git clone https://github.com/bluecatbamboo/VaultBox.git
+cd VaultBox
+pip install -r requirements.txt
+# See the next section for environment variable setup
 ```
 
-**Option B: Use Docker Redis (automatic fallback):**
+### 2. Pull and Run the Docker Image
+
 ```bash
-# Just start - Docker Redis will be used automatically if local Redis not found
-./run.sh start
+docker pull ghcr.io/bluecatbamboo/vaultbox:latest
+# See the next section for environment variable setup
 ```
 
-**Option C: Use full Docker container (includes everything):**
-Skip to Docker Deployment section - it includes embedded Redis and requires no local setup.
+For both methods, refer to the next section for required environment variable configuration.
 
-### Docker Deployment
+## System Design
 
-See [docker/README.md](docker/README.md) for complete Docker deployment instructions.
+### 1. Mail Arrival and Processing Flow
 
-**Quick Docker run:**
+- Incoming emails are received via the SMTP server (with STARTTLS support).
+- Each email is placed onto a Redis queue and broadcast to connected web UI clients in real time (SSE).
+- A background worker process consumes emails from the Redis queue, encrypts them, and saves them to the SQLite database.
+- A tokenized, encrypted search index is generated for privacy-preserving search.
+- The web UI and REST API provide access to search, view, and download emails.
+
+### 2. Authentication Flow
+
+- User credentials (username, bcrypt-hashed password, and TOTP secret) are provided via environment variables.
+- Login to the web UI requires both password and TOTP code (2FA).
+- Passwords are verified using bcrypt; TOTP codes are verified using pyotp.
+- Upon successful login, a JWT access token is issued and stored in an HttpOnly cookie.
+- API access is protected by JWT authentication (token required for all endpoints).
+- All sensitive keys and secrets are managed via environment variables.
+
+## Environment Variable Configuration
+
+VaultBox requires several environment variables for secure operation. The same variables are used for both local and Docker runs, but the format for setting them differs:
+
+- **Local run:** Set variables in a `.env` file or export them in your shell.
+- **Docker run:** Pass variables using `-e` flags or with a `--env-file`.
+
+**Essential environment variables:**
+
+| Variable                | Description                                      |
+|-------------------------|--------------------------------------------------|
+| SECRET_KEY              | JWT signing key (**required**). Must be a 32-byte hex string (e.g., output of `openssl rand -hex 32`). |
+| EMAIL_ENCRYPTION_KEY    | Email content encryption key (**required**). Must be a valid Fernet key (e.g., output of `python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`). |
+| EMAIL_UI_USERS          | Admin user credentials (username:hash:totp) (**required**) |
+| SSL_CERT_BASE64         | Base64-encoded SSL certificate (**required**). Used for enabling STARTTLS on the SMTP server and HTTPS for the web UI. |
+| SSL_KEY_BASE64          | Base64-encoded SSL private key (**required**). Used for enabling STARTTLS on the SMTP server and HTTPS for the web UI. |
+| DATABASE_URL            | SQLite DB path (default: `sqlite:///./data/emails.db`) *(do not change unless needed)* |
+| REDIS_URL               | Redis connection URL (default: `redis://localhost:6379`) *(do not change unless needed)* |
+| ENABLE_SWAGGER          | Enable/disable Swagger docs (`true`/`false`)     |
+| ENABLE_UI               | Enable/disable web UI (`true`/`false`)           |
+
+*Most users should only set the required variables above. Other variables (like `DATABASE_URL` and `REDIS_URL`) should only be changed for advanced or custom setups.*
+
+**Multiple Users:**
+- You can specify multiple users in `EMAIL_UI_USERS` by separating each user entry with a semicolon (`;`).
+- Format: `username:password_hash:totp_secret;username2:password_hash2:totp_secret2`
+
+*Example for local run (.env):*
+```env
+SECRET_KEY=your-secret-key
+EMAIL_ENCRYPTION_KEY=your-encryption-key
+EMAIL_UI_USERS="admin:hash:totp"
+SSL_CERT_BASE64=base64-encoded-cert
+SSL_KEY_BASE64=base64-encoded-key
+```
+
+*Example for Docker run:*
 ```bash
-cd docker
-./build.sh
+docker run -e SECRET_KEY=your-secret-key \
+  -e EMAIL_ENCRYPTION_KEY=your-encryption-key \
+  -e EMAIL_UI_USERS="admin:hash:totp" \
+  -e SSL_CERT_BASE64=base64-encoded-cert \
+  -e SSL_KEY_BASE64=base64-encoded-key \
+  ...
+  ghcr.io/bluecatbamboo/vaultbox:latest
+```
 
-# Generate certificates and keys
+Or use a file:
+```bash
+docker run --env-file .env ghcr.io/bluecatbamboo/vaultbox:latest
+```
+
+See `.env.example` for a full list and details of all available variables.
+
+<details>
+<summary><strong>🔧 Utility Scripts for Generating Secrets and Credentials</strong></summary>
+
+You can use the following scripts to generate the required secrets and credentials for your `.env` file or Docker environment variables:
+
+**Generate a strong SECRET_KEY (hex):**
+```bash
+openssl rand -hex 32
+```
+
+**Generate an EMAIL_ENCRYPTION_KEY (Fernet key):**
+```python
+python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
+```
+
+**Generate a bcrypt password hash:**
+```python
+python3 -c 'import bcrypt; print(bcrypt.hashpw(b"your_password", bcrypt.gensalt()).decode())'
+```
+
+**Generate a TOTP secret (for use with authenticator apps):**
+```python
+python3 -c 'import pyotp; print(pyotp.random_base32())'
+```
+- The TOTP secret can be added to popular authenticator apps like Google Authenticator, Microsoft Authenticator, Authy, etc.
+
+**Generate base64-encoded SSL certificate and key:**
+```bash
+# Generate self-signed cert (for testing only)
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes \
   -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
-SSL_CERT_BASE64=$(base64 -w0 < cert.pem)
-SSL_KEY_BASE64=$(base64 -w0 < key.pem)
-
-# Run container (includes embedded Redis)
-docker run -d --name smtp-server \
-  -e SECRET_KEY="$(openssl rand -hex 32)" \
-  -e EMAIL_ENCRYPTION_KEY="$(python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" \
-  -e EMAIL_UI_USERS="admin:\$2b\$12\$lABwphGhtU6s0PtCyMr4WOlS6F8OeemfXhUhpC2Oaawm2SUkYo8Pi:VDHEAPMAXDD2PQOGPZH4FVXRKDNHJ6QH" \
-  -e SSL_CERT_BASE64="$SSL_CERT_BASE64" \
-  -e SSL_KEY_BASE64="$SSL_KEY_BASE64" \
-  -p 8001:8001 -p 587:587 \
-  smtp-email-server:latest
+# Encode to base64
+base64 -w0 < cert.pem > cert.pem.b64
+base64 -w0 < key.pem > key.pem.b64
 ```
 
-## 🔐 Configuration
+</details>
 
-All configuration is done via environment variables. See `.env.example` for all available options.
+## User Model and SSE Subscription
 
-### Required Variables
-- `SECRET_KEY` - JWT signing key
-- `EMAIL_ENCRYPTION_KEY` - Email content encryption key  
-- `EMAIL_UI_USERS` - User credentials (username:hash:totp)
-- `SSL_CERT_BASE64` - Base64-encoded SSL certificate
-- `SSL_KEY_BASE64` - Base64-encoded SSL private key
+**Note:** The "users" in VaultBox are not actual email recipients, but admin users who can view all incoming emails regardless of the "To" address. These users are defined for authentication and access control to the web UI and API.
 
-### Default Credentials
-- **Username:** `admin`
-- **Password:** `admin123`
-- **TOTP Secret:** `VDHEAPMAXDD2PQOGPZH4FVXRKDNHJ6QH`
+For real-time updates via the SSE (Server-Sent Events) endpoint, clients must subscribe using a full email address. The SSE stream will only deliver updates for emails addressed to that specific address, allowing for targeted monitoring if needed.
 
-⚠️ **Change these in production!**
+## Endpoints & Access URLs
 
-## 🌐 Access URLs
+Once VaultBox is running, you can access the following endpoints:
 
-- **Web Interface:** http://localhost:8001
-- **API Documentation:** http://localhost:8001/docs
-- **SMTP Server:** localhost:587
+- **Web UI:**  http://localhost:8001  (if ENABLE_UI is true)
+- **API Documentation (Swagger):**  http://localhost:8001/docs  (if ENABLE_SWAGGER is true)
+- **SMTP Server:**  localhost:587  (for sending test emails)
+- **REST API Base:**  http://localhost:8001/api/
+    - `/api/emails` — List/search emails
+    - `/api/emails/{id}` — Get email by ID
+    - `/api/me` — Get current user info
+    - `/api/login` — Login (JWT)
+    - `/api/logout` — Logout
+    - `/api/sse/{email}` — Subscribe to real-time updates for a specific email address
 
-## 📋 Commands
+Adjust the host/port as needed if you change the configuration.
 
-```bash
-./run.sh start    # Start all services
-./run.sh stop     # Stop all services  
-./run.sh status   # Check service status
-./run.sh logs     # View recent logs
-./run.sh test     # Send test email
-./run.sh totp     # Generate TOTP code
-```
+## Future Development & Roadmap
 
-## 🔧 Development
+- Refine and optimize the existing codebase
+- Improve and modernize the web UI
+- Explore or plan a migration to Go for enhanced performance and scalability
 
-### Requirements
-- Python 3.8+
-- Redis server
-- OpenSSL
-
-### Installation
-```bash
-pip install -r requirements.txt
-```
-
-### SSL Certificates
-This application **only** accepts base64-encoded SSL certificates via environment variables. This ensures:
-- ✅ Consistent deployment across Docker/Kubernetes/cloud
-- ✅ No file mounting dependencies
-- ✅ Perfect for CI/CD and cloud deployments
-- ✅ Secure secret management
-
-## 🐳 Docker Features
-
-- **Self-contained:** Redis embedded in container
-- **Cloud-ready:** Works with Kubernetes, GCP, AWS, Azure
-- **Secure:** No default certificates, requires user-provided SSL
-- **Professional:** Environment variable configuration like major Docker images
-
-## 📚 API Documentation
-
-Access the interactive API documentation at `/docs` when the server is running.
-
-## 🧪 Testing
-
-Send a test email:
-```bash
-./run.sh test
-```
-
-Or manually:
-```bash
-python testing/send_test_email.py
-```
-
-## 🔒 Security Notes
-
-1. **Always change default credentials in production**
-2. **Use strong `SECRET_KEY` and `EMAIL_ENCRYPTION_KEY`**
-3. **Use proper CA-signed certificates for production**
-4. **Set `COOKIE_SECURE=true` with HTTPS**
-5. **Disable Swagger in production: `ENABLE_SWAGGER=false`**
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
+
+## Team
+
+VaultBox is a solo project. Please take it easy on the author!
