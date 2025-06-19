@@ -168,8 +168,7 @@ class SMTPHandler(AsyncMessage):
 async def start_smtp_server() -> None:
     """Start the SMTP server with TLS support.
     
-    Configures and starts an SMTP server with STARTTLS on port 587.
-    
+    Configures and starts an SMTP server with STARTTLS on port 587 (and optionally port 25).
     """
     import base64
     import tempfile
@@ -222,20 +221,36 @@ async def start_smtp_server() -> None:
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
         
-        # Create and start server
+        # Create and start server(s)
         loop = asyncio.get_running_loop()
-        server = await loop.create_server(
+        servers = []
+        
+        # Always start on 587
+        server_587 = await loop.create_server(
             lambda: SMTP(SMTPHandler(), require_starttls=True, tls_context=ssl_context),
             host="0.0.0.0",
             port=587
         )
+        servers.append(server_587)
+        logger.info(f"[SMTP] Server starting on port 587 with STARTTLS (default, always enabled)")
         
-        logger.info(f"[SMTP] Server starting on port 587 with STARTTLS")
-        logger.info("[SMTP] Using base64-encoded SSL certificates")
-            
-        async with server:
-            await server.serve_forever()
-            
+        # Optionally start on port 25 if enabled
+        enable_port_25 = os.environ.get('ENABLE_SMTP_PORT25', 'false').lower() == 'true'
+        if enable_port_25:
+            server_25 = await loop.create_server(
+                lambda: SMTP(SMTPHandler(), require_starttls=True, tls_context=ssl_context),
+                host="0.0.0.0",
+                port=25
+            )
+            servers.append(server_25)
+            logger.info(f"[SMTP] Server starting on port 25 with STARTTLS (ENABLE_SMTP_PORT25=true)")
+        else:
+            logger.info("[SMTP] Port 25 listener is disabled (set ENABLE_SMTP_PORT25=true to enable)")
+        
+        # Serve all servers
+        async with asyncio.TaskGroup() as tg:
+            for s in servers:
+                tg.create_task(s.serve_forever())
     finally:
         # Clean up temporary certificate files
         if temp_cert_file:

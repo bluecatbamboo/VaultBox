@@ -139,9 +139,9 @@ case "${1:-start}" in
         
         # Kill any existing processes
         pkill -f "redis-server" 2>/dev/null || true
-        pkill -f "python MailHandler.py" 2>/dev/null || true
+        pkill -f "python3 MailHandler.py" 2>/dev/null || true
         pkill -f "uvicorn email_ui_api" 2>/dev/null || true
-        pkill -f "python redis_to_db_worker.py" 2>/dev/null || true
+        pkill -f "python3 redis_to_db_worker.py" 2>/dev/null || true
         stop_docker_redis
         sleep 2
         
@@ -175,7 +175,7 @@ case "${1:-start}" in
         
         # Start SMTP Server
         echo "Starting SMTP Server on port $SMTP_PORT..."
-        nohup python MailHandler.py > logs/smtp.log 2>&1 &
+        nohup python3 MailHandler.py > logs/smtp.log 2>&1 &
         SMTP_PID=$!
         echo $SMTP_PID > logs/smtp.pid
         sleep 2
@@ -187,7 +187,7 @@ case "${1:-start}" in
             exit 1
         fi
         
-        # Start Web UI
+        # Start Web UI/API
         echo "Starting Web UI/API on port $WEB_PORT..."
         nohup uvicorn email_ui_api:app --host $WEB_HOST --port $WEB_PORT --log-config logging.yaml > logs/web.log 2>&1 &
         WEB_PID=$!
@@ -197,13 +197,13 @@ case "${1:-start}" in
         if kill -0 $WEB_PID 2>/dev/null; then
             echo "SUCCESS: Web UI/API started (PID: $WEB_PID)"
         else
-            echo "ERROR: Failed to start Web UI"
+            echo "ERROR: Failed to start Web UI/API"
             exit 1
         fi
         
         # Start Redis Worker
         echo "Starting Redis Worker..."
-        nohup python redis_to_db_worker.py > logs/worker.log 2>&1 &
+        nohup python3 redis_to_db_worker.py > logs/worker.log 2>&1 &
         WORKER_PID=$!
         echo $WORKER_PID > logs/worker.pid
         sleep 2
@@ -263,7 +263,7 @@ case "${1:-start}" in
                 
                 if ! kill -0 $SMTP_PID 2>/dev/null; then
                     echo "ERROR: SMTP Server process died, restarting..."
-                    nohup python MailHandler.py > logs/smtp.log 2>&1 &
+                    nohup python3 MailHandler.py > logs/smtp.log 2>&1 &
                     SMTP_PID=$!
                     echo $SMTP_PID > logs/smtp.pid
                 fi
@@ -277,7 +277,7 @@ case "${1:-start}" in
                 
                 if ! kill -0 $WORKER_PID 2>/dev/null; then
                     echo "ERROR: Redis Worker process died, restarting..."
-                    nohup python redis_to_db_worker.py > logs/worker.log 2>&1 &
+                    nohup python3 redis_to_db_worker.py > logs/worker.log 2>&1 &
                     WORKER_PID=$!
                     echo $WORKER_PID > logs/worker.pid
                 fi
@@ -338,9 +338,9 @@ case "${1:-start}" in
         
         # Also kill by process name as backup
         pkill -f "redis-server" 2>/dev/null || true
-        pkill -f "python MailHandler.py" 2>/dev/null || true
+        pkill -f "python3 MailHandler.py" 2>/dev/null || true
         pkill -f "uvicorn email_ui_api" 2>/dev/null || true
-        pkill -f "python redis_to_db_worker.py" 2>/dev/null || true
+        pkill -f "python3 redis_to_db_worker.py" 2>/dev/null || true
         stop_docker_redis  # Also stop Docker Redis if running
         
         echo "All services stopped"
@@ -438,12 +438,12 @@ case "${1:-start}" in
     
     test)
         echo "Sending test email..."
-        python testing/send_test_email.py
+        python3 testing/send_test_email.py
         ;;
     
     totp)
         echo "Current TOTP Code:"
-        python -c "import pyotp; print('TOTP Code:', pyotp.TOTP('VDHEAPMAXDD2PQOGPZH4FVXRKDNHJ6QH').now())"
+        python3 -c "import pyotp; print('TOTP Code:', pyotp.TOTP('VDHEAPMAXDD2PQOGPZH4FVXRKDNHJ6QH').now())"
         ;;
     
     *)

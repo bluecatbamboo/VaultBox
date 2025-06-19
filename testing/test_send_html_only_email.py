@@ -25,10 +25,9 @@ def random_string(length=8):
 
 
 class TestSendHtmlOnlyEmail(unittest.TestCase):
-    """Test case for HTML-only email sending."""
-    
+    smtp_port = 587  # Default port
+
     def test_send_html_only(self):
-        """Test sending an email with only HTML content (no plain text)."""
         now = datetime.now()
         rand_id = random_string(12)
         subject = f"HTML Only Test - {now.strftime('%Y-%m-%d %H:%M:%S')} - {rand_id}"
@@ -56,10 +55,10 @@ class TestSendHtmlOnlyEmail(unittest.TestCase):
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         try:
-            with smtplib.SMTP("localhost", 587) as server:
+            with smtplib.SMTP("localhost", self.smtp_port) as server:
                 server.starttls(context=context)
                 server.send_message(msg)
-            print(f"HTML only test email sent successfully to {to_addr}")
+            print(f"HTML only test email sent successfully to {to_addr} (port {self.smtp_port})")
             result = True
         except Exception as e:
             print(f"Failed to send HTML only email: {e}")
@@ -67,4 +66,12 @@ class TestSendHtmlOnlyEmail(unittest.TestCase):
         self.assertTrue(result, "Failed to send HTML only email")
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Send an HTML-only test email to VaultBox SMTP server.")
+    parser.add_argument('--port', type=int, default=587, help='SMTP server port (default: 587)')
+    args, remaining = parser.parse_known_args()
+    # Set the port on the class before running tests
+    TestSendHtmlOnlyEmail.smtp_port = args.port
+    import sys
+    sys.argv = [sys.argv[0]] + remaining
     unittest.main()

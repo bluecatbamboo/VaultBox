@@ -251,8 +251,8 @@ class EmailDB:
         
         return {
             "id": row[0],
-            "sender": row[1],
-            "recipient": row[2],
+            "sender": self._decrypt_if_needed(row[1]),
+            "recipient": self._decrypt_if_needed(row[2]),
             "subject": self._decrypt_if_needed(row[3]),
             "body": body_text,
             "is_read": bool(row[5]),

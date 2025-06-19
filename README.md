@@ -18,6 +18,7 @@ A secure, fast mailbox server designed for safely testing (recieving) and viewin
     - [1. Mail Arrival and Processing Flow](#1-mail-arrival-and-processing-flow)
     - [2. Authentication Flow](#2-authentication-flow)
   - [Environment Variable Configuration](#environment-variable-configuration)
+    - [Common Local Development Commands](#common-local-development-commands)
   - [User Model and SSE Subscription](#user-model-and-sse-subscription)
   - [Endpoints \& Access URLs](#endpoints--access-urls)
   - [Email Testing](#email-testing)
@@ -73,7 +74,7 @@ You can set up VaultBox in two main ways:
 ```bash
 git clone https://github.com/bluecatbamboo/VaultBox.git
 cd VaultBox
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 # See the next section for environment variable setup
 ```
 
@@ -125,6 +126,7 @@ VaultBox requires several environment variables for secure operation. The same v
 | REDIS_URL               | Redis connection URL (default: `redis://localhost:6379`) *(do not change unless needed)* |
 | ENABLE_SWAGGER          | Enable/disable Swagger docs (`true`/`false`)     |
 | ENABLE_UI               | Enable/disable web UI (`true`/`false`)           |
+| ENABLE_SMTP_PORT25      | Enable/disable SMTP port 25 listener (`true`/`false`). Default is `false`. |
 
 *Most users should only set the required variables above. Other variables (like `DATABASE_URL` and `REDIS_URL`) should only be changed for advanced or custom setups.*
 
@@ -140,6 +142,42 @@ EMAIL_UI_USERS="admin:hash:totp"
 SSL_CERT_BASE64=base64-encoded-cert
 SSL_KEY_BASE64=base64-encoded-key
 ```
+### Common Local Development Commands
+
+- **First time setup (create database):**
+  ```bash
+  python3 create_db.py
+  ```
+  This will initialize the SQLite database if it does not exist.
+
+- **Start all VaultBox services: (best to have the redis hosted and running before start)**
+  ```bash
+  ./run.sh start
+  ./run.sh stop
+  ```
+  By default, this will start the SMTP server (on port 587, and optionally 25 if enabled), the web UI/API, and the background worker.
+  - To enable SMTP on port 25, set `ENABLE_SMTP_PORT25=true` in your .env file before starting.
+
+- **Stop all VaultBox services:**
+  ```bash
+  ./run.sh stop
+  ```
+
+- **View logs:**
+  - SMTP server log: smtp.log
+  - Web/API log: web.log
+  - Worker log: worker.log
+  - You can use `tail -f logs/smtp.log` (or web.log/worker.log) to watch logs in real time.
+
+- **Send a test email (plain text):**
+  ```bash
+  python3 testing/send_test_email.py --port 587  # or --port 25
+  ```
+
+- **Send a test HTML-only email:**
+  ```bash
+  python3 testing/test_send_html_only_email.py --port 587  # or --port 25
+  ```
 
 *Example for Docker run:*
 ```bash
@@ -156,7 +194,7 @@ Or use a file:
 ```bash
 docker run --env-file .env ghcr.io/bluecatbamboo/vaultbox:latest
 ```
-
+* container user remember to port forward ports
 See `.env.example` for a full list and details of all available variables.
 
 <details>
@@ -209,7 +247,7 @@ Once VaultBox is running, you can access the following endpoints:
 
 - **Web UI:**  http://localhost:8001  (if ENABLE_UI is true)
 - **API Documentation (Swagger):**  http://localhost:8001/docs  (if ENABLE_SWAGGER is true)
-- **SMTP Server:**  localhost:587  (for sending test emails)
+- **SMTP Server:**  localhost:587  (for sending test emails; port 25 also available if ENABLE_SMTP_PORT25 is true)
 - **REST API Base:**  http://localhost:8001/api/
     - `/api/emails` — List/search emails
     - `/api/emails/{id}` — Get email by ID
@@ -230,10 +268,10 @@ You can easily test VaultBox by sending emails to its SMTP server. Sample script
 Run the following script to send a test email to VaultBox (make sure the VaultBox server is running):
 
 ```bash
-python3 testing/send_test_email.py
+python3 testing/send_test_email.py --port 587  # or --port 25
 ```
 
-This script will send a test email to `test@example.com` via the local SMTP server on port 587. You can customize the recipient, sender, and subject by editing the script or calling its function directly.
+You can use the `--port` flag to specify which SMTP port to use (default is 587, but you can use 25 if enabled).
 
 <details>
 <summary><strong>Example Python Code: Send Plain Text Email</strong></summary>
@@ -244,7 +282,7 @@ import ssl
 from datetime import datetime
 from email.message import EmailMessage
 
-def send_test_email(subject=None, to_addr=None, from_addr=None):
+def send_test_email(subject=None, to_addr=None, from_addr=None, smtp_port=587):
     subject = subject or f"Test Email - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     to_addr = to_addr or "test@example.com"
     from_addr = from_addr or "sender@example.com"
@@ -265,17 +303,21 @@ def send_test_email(subject=None, to_addr=None, from_addr=None):
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
     try:
-        with smtplib.SMTP("localhost", 587) as server:
+        with smtplib.SMTP("localhost", smtp_port) as server:
             server.starttls(context=context)
             server.send_message(msg)
-        print(f"Test email sent successfully to {to_addr}")
+        print(f"Test email sent successfully to {to_addr} (port {smtp_port})")
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")
         return False
 
 if __name__ == "__main__":
-    send_test_email()
+    import argparse
+    parser = argparse.ArgumentParser(description="Send a test email to VaultBox SMTP server.")
+    parser.add_argument('--port', type=int, default=587, help='SMTP server port (default: 587)')
+    args = parser.parse_args()
+    send_test_email(smtp_port=args.port)
 ```
 
 </details>

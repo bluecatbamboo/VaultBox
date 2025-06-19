@@ -9,13 +9,14 @@ from datetime import datetime
 from email.message import EmailMessage
 
 
-def send_test_email(subject=None, to_addr=None, from_addr=None):
+def send_test_email(subject=None, to_addr=None, from_addr=None, smtp_port=587):
     """Send a test email via SMTP server.
     
     Args:
         subject: Email subject line (auto-generated if None).
         to_addr: Recipient email address.
         from_addr: Sender email address.
+        smtp_port: SMTP server port (default: 587).
         
     Returns:
         bool: True if email sent successfully, False otherwise.
@@ -44,10 +45,10 @@ def send_test_email(subject=None, to_addr=None, from_addr=None):
     context.verify_mode = ssl.CERT_NONE
 
     try:
-        with smtplib.SMTP("localhost", 587) as server:
+        with smtplib.SMTP("localhost", smtp_port) as server:
             server.starttls(context=context)
             server.send_message(msg)
-        print(f"Test email sent successfully to {to_addr}")
+        print(f"Test email sent successfully to {to_addr} (port {smtp_port})")
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")
@@ -55,4 +56,8 @@ def send_test_email(subject=None, to_addr=None, from_addr=None):
 
 
 if __name__ == "__main__":
-    send_test_email()
+    import argparse
+    parser = argparse.ArgumentParser(description="Send a test email to VaultBox SMTP server.")
+    parser.add_argument('--port', type=int, default=587, help='SMTP server port (default: 587)')
+    args = parser.parse_args()
+    send_test_email(smtp_port=args.port)
